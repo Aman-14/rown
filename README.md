@@ -16,7 +16,7 @@ Rown is a command-line tool written in Rust for downloading files with the abili
 
 `cargo run -- --url https://example.com/video --parts 2 --output out.mp4 `
 
-This will download the file from the specified URL in four parallel parts and save it as `out.mp4`.
+This will download the file from the specified URL in two parallel parts and save it as `out.mp4`.
 
 ## Building
 
