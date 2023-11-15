@@ -10,7 +10,7 @@ use reqwest::{blocking::Client, header::CONTENT_LENGTH};
 pub struct DownloadArgs {
     pub client: Client,
     pub url: String,
-    pub parts: Option<usize>,
+    pub parts: usize,
     pub file_name: String,
 }
 
@@ -29,22 +29,16 @@ fn get_content_length(client: &Client, url: &str) -> Option<usize> {
     return content_length;
 }
 
-pub fn download(
+fn download_with_threads(
     DownloadArgs {
         client,
         url,
         parts,
         file_name,
     }: DownloadArgs,
+    content_length: usize,
 ) {
-    // pub fn download(client: Client, url: &str, parts: Option<u32>) {
-    let cl = get_content_length(&client, &url)
-        .expect("Failed to retrieve content length from the server");
-
-    println!("Content-length - {}", cl);
-
-    let parts = parts.unwrap_or(1);
-    let delta: usize = cl / parts;
+    let delta: usize = content_length / parts;
 
     let temp_files = Arc::new(Mutex::new(Vec::new()));
     let mut handles = Vec::new();
@@ -59,7 +53,7 @@ pub fn download(
             let range_start = idx * delta;
 
             let range_end = if idx == (parts - 1) {
-                cl - 1 // 0 to length - 1
+                content_length - 1 // 0 to length - 1
             } else {
                 (i + 1) * delta - 1
             };
@@ -102,6 +96,33 @@ pub fn download(
             .expect("Cannot seek the file");
         io::copy(&mut file, &mut writer).expect("Cannot write to main file");
     }
+}
+
+pub fn download(args: DownloadArgs) {
+    let cl = get_content_length(&args.client, &args.url)
+        .expect("Failed to retrieve content length from the server");
+
+    println!("Content-length - {}", cl);
+
+    println!("parts, {}", args.parts);
+    if args.parts > 1 {
+        return download_with_threads(args, cl);
+    }
+
+    let DownloadArgs {
+        url,
+        client,
+        file_name,
+        ..
+    } = args;
+
+    let mut writer = File::create(&file_name).expect("Cannot create file");
+    client
+        .get(&url)
+        .send()
+        .expect("Failed to send request")
+        .copy_to(&mut writer)
+        .expect("Failed to copy to write");
 
     println!("Download completed. Final file: {}", file_name);
 }

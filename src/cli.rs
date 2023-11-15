@@ -5,8 +5,8 @@ pub struct Args {
     #[arg(short, long)]
     pub url: String,
 
-    #[arg(short, long)]
-    pub parts: Option<usize>,
+    #[arg(short, long, default_value = "1")]
+    pub parts: usize,
 
     #[arg(short, long)]
     pub output: String,
